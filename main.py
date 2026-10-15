@@ -2,6 +2,7 @@
 
 import shlex
 
+from models import Commit
 from repository import Repository
 
 
@@ -17,7 +18,10 @@ def parse_command(line: str) -> tuple[str, list[str]]:
 
     command = tokens[0].upper()
     arguments = tokens[1:]
-    argument_counts = {"INIT": 1, "COMMIT": 1, "BRANCH": 1, "SWITCH": 1, "EXIT": 0, "QUIT": 0}
+    argument_counts = {
+        "INIT": 1, "COMMIT": 1, "BRANCH": 1, "SWITCH": 1,
+        "LOG": 0, "ANCESTORS": 1, "EXIT": 0, "QUIT": 0,
+    }
     if not command:
         raise ValueError("Invalid args")
     if command not in argument_counts:
@@ -29,12 +33,26 @@ def parse_command(line: str) -> tuple[str, list[str]]:
     return command, arguments
 
 
+def print_commits(commits: list[Commit]) -> None:
+    """커밋의 hash, 작성자, 시각, 메시지를 출력한다."""
+    if not commits:
+        print("No commits found.")
+        return
+    for commit in commits:
+        timestamp = commit.timestamp.isoformat(sep=" ", timespec="seconds")
+        print(f"commit {commit.hash} ({commit.author}, {timestamp})")
+        print(commit.message)
+
+
 def execute_command(repository: Repository, line: str) -> bool:
     """한 줄을 실행하고, 입력을 계속 받을지 반환한다."""
     command, arguments = parse_command(line)
     if command in ("EXIT", "QUIT"):
         return False
     if not command:
+        return True
+    if command == "LOG":
+        print_commits(repository.get_log())
         return True
 
     argument = arguments[0]
@@ -52,6 +70,8 @@ def execute_command(repository: Repository, line: str) -> bool:
     elif command == "SWITCH":
         repository.switch_branch(argument)
         print(f"Switched to branch: {argument}")
+    elif command == "ANCESTORS":
+        print_commits(repository.get_ancestors(argument))
     return True
 
 

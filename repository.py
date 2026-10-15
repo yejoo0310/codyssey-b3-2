@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 
+from graph import find_ancestors, topological_sort
 from models import Commit
 
 
@@ -86,3 +87,13 @@ class Repository:
             raise ValueError(f"Unknown branch: {branch_name}")
 
         self.current_branch = branch_name
+
+    def get_log(self) -> list[Commit]:
+        """저장소 전체 커밋을 부모 우선 순서로 반환한다."""
+        self.require_initialized()
+        return topological_sort(self.commits)
+
+    def get_ancestors(self, commit_hash: str) -> list[Commit]:
+        """지정한 커밋의 모든 조상을 반환한다."""
+        self.require_initialized()
+        return find_ancestors(self.commits, commit_hash)

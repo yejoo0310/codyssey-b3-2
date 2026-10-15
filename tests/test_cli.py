@@ -173,3 +173,80 @@ class ReplTests(unittest.TestCase):
         self.assertIn("mini-git> ", result.stdout)
         self.assertIn("Current user: Alice Kim", result.stdout)
         self.assertIn("[main c000001] Initial commit", result.stdout)
+
+
+class GraphCommandTests(unittest.TestCase):
+    """로그와 조상 탐색의 입력 규칙과 출력을 확인한다."""
+
+    def test_graph_command_arguments(self) -> None:
+        self.assertEqual(parse_command("lOg"), ("LOG", []))
+        self.assertEqual(parse_command("aNcEsToRs c000001"), ("ANCESTORS", ["c000001"]))
+        for line in ("LOG extra", "LOG --sort-by=date", "ANCESTORS", "ANCESTORS one two", 'ANCESTORS ""'):
+            with self.subTest(line=line):
+                with self.assertRaisesRegex(ValueError, "^Invalid args$"):
+                    parse_command(line)
+
+    def test_log_and_ancestors_print_metadata_in_parent_first_order(self) -> None:
+        repository = Repository()
+        repository.initialize("Alice Kim")
+        root = repository.create_commit("시작")
+        repository.create_branch("feature")
+        child = repository.create_commit("메인 작업")
+        repository.switch_branch("feature")
+        feature = repository.create_commit("기능 작업")
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertTrue(execute_command(repository, "LOG"))
+        result = output.getvalue()
+        self.assertLess(result.index(f"commit {root.hash}"), result.index(f"commit {child.hash}"))
+        self.assertLess(result.index(f"commit {root.hash}"), result.index(f"commit {feature.hash}"))
+        self.assertIn("Alice Kim", result)
+        self.assertIn(root.timestamp.isoformat(sep=" ", timespec="seconds"), result)
+        self.assertIn("메인 작업", result)
+        self.assertIn("기능 작업", result)
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertTrue(execute_command(repository, f"ANCESTORS {feature.hash}"))
+        self.assertIn(f"commit {root.hash}", output.getvalue())
+        self.assertNotIn(f"commit {feature.hash}", output.getvalue())
+        self.assertNotIn(f"commit {child.hash}", output.getvalue())
+
+    def test_empty_log_and_root_ancestors_print_empty_result(self) -> None:
+        repository = Repository()
+        repository.initialize("Alice")
+        output = io.StringIO()
+        with redirect_stdout(output):
+            execute_command(repository, "LOG")
+            root = repository.create_commit("시작")
+            execute_command(repository, f"ANCESTORS {root.hash}")
+
+        self.assertEqual(output.getvalue(), "No commits found.\nNo commits found.\n")
+
+    def test_graph_errors_do_not_stop_repl(self) -> None:
+        lines = ["LOG", "ANCESTORS missing", "INIT Alice", "ANCESTORS missing", 'COMMIT "시작"', "LOG", "quit"]
+        output = io.StringIO()
+        with patch("builtins.input", side_effect=lines):
+            with redirect_stdout(output):
+                main()
+
+        result = output.getvalue()
+        self.assertEqual(result.count("Repository not initialized"), 2)
+        self.assertIn("Unknown commit: missing", result)
+        self.assertIn("commit c000001 (Alice,", result)
+
+    def test_graph_commands_run_in_real_process(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "main.py"],
+            input='INIT Alice\nCOMMIT "시작"\nCOMMIT "다음"\nLOG\nANCESTORS c000002\nquit\n',
+            capture_output=True,
+            text=True,
+            cwd=Path(__file__).resolve().parents[1],
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stderr, "")
+        self.assertEqual(result.stdout.count("commit c000001 (Alice,"), 2)
+        self.assertEqual(result.stdout.count("commit c000002 (Alice,"), 1)

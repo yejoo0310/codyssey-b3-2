@@ -3,9 +3,9 @@
 커밋과 브랜치의 관계를 메모리에 저장하는 Python CLI 학습 프로젝트입니다.
 커밋 그래프를 만들고 탐색·검색·정렬 기능을 직접 구현하며 Git의 내부 구조와 알고리즘을 공부합니다.
 
-현재는 **Phase 3: 기본 CLI 연결**까지 완료했습니다.
-반복 입력 CLI에서 `INIT`, `COMMIT`, `BRANCH`, `SWITCH`, `exit`, `quit`를 사용할 수 있습니다.
-`LOG`, `PATH`, `ANCESTORS`, `SEARCH`와 정렬 옵션은 이후 Phase의 구현 목표입니다.
+현재는 **Phase 4: 기본 로그와 조상 탐색**까지 완료했습니다.
+반복 입력 CLI에서 `INIT`, `COMMIT`, `BRANCH`, `SWITCH`, `LOG`, `ANCESTORS`, `exit`, `quit`를 사용할 수 있습니다.
+`PATH`, `SEARCH`와 로그 정렬 옵션은 이후 Phase의 구현 목표입니다.
 
 ## 개발 환경과 실행
 
@@ -56,6 +56,73 @@ mini-git> quit
 `main.py`의 `parse_command()`는 입력을 분리하고 형식을 검사합니다.
 `execute_command()`는 저장소 메서드를 호출하고 결과를 출력하며, 종료 명령이면 `False`를 반환합니다.
 `main()`은 하나의 저장소를 유지하면서 입력과 실행을 반복하고 오류를 처리합니다.
+
+### Phase 4 로그와 조상 탐색 실행해 보기
+
+새로 실행한 CLI에서 아래 명령을 입력합니다. 시각은 실행 시점에 따라 달라지며 UTC로 표시합니다.
+
+```text
+mini-git> INIT Alice
+Initialized repository.
+Current branch: main
+Current user: Alice
+mini-git> COMMIT "Initial commit"
+[main c000001] Initial commit
+mini-git> BRANCH feature
+Created branch: feature
+mini-git> SWITCH feature
+Switched to branch: feature
+mini-git> COMMIT "Add login"
+[feature c000002] Add login
+mini-git> SWITCH main
+Switched to branch: main
+mini-git> COMMIT "Add payment"
+[main c000003] Add payment
+mini-git> LOG
+commit c000001 (Alice, 2026-10-16 00:00:00+00:00)
+Initial commit
+commit c000002 (Alice, 2026-10-16 00:01:00+00:00)
+Add login
+commit c000003 (Alice, 2026-10-16 00:02:00+00:00)
+Add payment
+mini-git> ANCESTORS c000003
+commit c000001 (Alice, 2026-10-16 00:00:00+00:00)
+Initial commit
+mini-git> ANCESTORS c000001
+No commits found.
+mini-git> ANCESTORS missing
+Unknown commit: missing
+```
+
+`LOG`는 현재 브랜치와 관계없이 저장소 전체 커밋을 출력합니다.
+부모가 반드시 자식보다 먼저 나오며, 선후 관계가 없는 형제 커밋의 순서는 자유입니다.
+빈 저장소의 로그나 루트 커밋의 조상 목록은 `No commits found.`를 출력합니다.
+`ANCESTORS`는 부모 방향으로만 탐색하고 시작 커밋 자신과 다른 가지의 커밋은 포함하지 않습니다.
+결과 순서는 자유이며 같은 조상은 한 번만 출력합니다.
+두 조회 명령은 커밋, 부모 관계, 브랜치 위치를 변경하지 않습니다.
+초기화 전에는 두 명령 모두 `Repository not initialized` 오류를 출력합니다.
+`LOG --sort-by=...`는 Phase 7에서 추가하므로 현재는 `Invalid args`로 처리합니다.
+
+#### 알고리즘 구조
+
+`graph.py`에 입력·출력과 분리한 두 함수를 구현했습니다.
+`Repository.get_log()`와 `Repository.get_ancestors(hash)`가 초기화 검사 후 이 함수를 호출하고,
+CLI의 `print_commits()`가 반환된 커밋 목록을 출력합니다.
+
+| 함수 | 방법 | 시간복잡도 | 추가 공간 |
+| --- | --- | --- | --- |
+| `topological_sort(commits)` | Kahn 위상 정렬 | `O(V + E)` | `O(V + E)` |
+| `find_ancestors(commits, hash)` | 스택을 사용하는 부모 방향 DFS | `O(Va + Ea)` | `O(Va)` |
+
+`V`는 전체 커밋 수, `E`는 부모 연결 수입니다.
+`Va`, `Ea`는 시작 커밋과 그 조상에서 방문한 커밋·부모 연결 수입니다.
+복잡도는 딕셔너리·집합의 평균 조회 비용을 기준으로 합니다.
+
+위상 정렬은 부모 수와 부모에서 자식을 찾는 목록을 만든 뒤, 남은 부모 수가 0인 커밋부터 큐로 처리합니다.
+조상 탐색은 스택과 방문 집합을 사용하며, 발견할 때 방문 표시를 해 공통 조상을 중복 처리하지 않습니다.
+그래프에서 없는 부모를 참조하면 `Unknown commit: <hash>` 오류가 발생합니다.
+위상 정렬 중 모든 커밋을 처리하지 못하면 순환으로 판단하고 `Invalid commit graph: cycle detected` 오류가 발생합니다.
+조상 탐색의 방문 집합은 중복과 무한 반복을 막지만, 순환 검증 기능을 대신하지는 않습니다.
 
 ### Phase 1 실행해 보기
 
@@ -134,6 +201,8 @@ Phase 2 테스트는 커밋 메타데이터와 부모 관계, 브랜치별 독�
 잘못된 인자·중복 이름·없는 브랜치로 실패했을 때의 상태 보존을 확인합니다.
 Phase 3 테스트는 따옴표·대소문자·인자 검증, 오류 후 입력 계속 받기, 종료 명령과 EOF·Ctrl+C,
 실제 프로세스에서의 `main.py` 실행을 확인합니다.
+Phase 4 테스트는 저장 순서와 무관한 부모 우선 출력, 여러 부모와 공통 조상, 단절된 이력,
+1,500개 커밋의 긴 이력, 없는 커밋·부모와 순환, 조회 전후 상태 보존, 실제 CLI 실행을 확인합니다.
 
 ## 구현 범위
 
@@ -336,9 +405,9 @@ README.md        # 실행법, 동작 규칙, 학습 계획
 
 학습: 방향 그래프, Kahn 위상 정렬, DFS 또는 BFS, 방문 집합.
 
-- [ ] 부모 목록으로 부모 수와 자식 조회 구조 구성
-- [ ] 부모 우선 `LOG`와 중복 없는 `ANCESTORS` 구현 및 CLI 연결
-- [ ] 분기한 이력과 여러 부모가 있는 테스트 그래프 검증
+- [x] 부모 목록으로 부모 수와 자식 조회 구조 구성
+- [x] 부모 우선 `LOG`와 중복 없는 `ANCESTORS` 구현 및 CLI 연결
+- [x] 분기한 이력과 여러 부모가 있는 테스트 그래프 검증
 
 완료 기준: 모든 부모가 자식보다 먼저 출력되고, 공통 조상도 한 번만 출력된다.
 
