@@ -3,22 +3,59 @@
 커밋과 브랜치의 관계를 메모리에 저장하는 Python CLI 학습 프로젝트입니다.
 커밋 그래프를 만들고 탐색·검색·정렬 기능을 직접 구현하며 Git의 내부 구조와 알고리즘을 공부합니다.
 
-현재는 **Phase 2: 커밋과 브랜치 관리**까지 완료했습니다.
-초기화, 커밋 생성, 브랜치 생성·전환을 Python 메서드로 사용할 수 있습니다.
-아래 CLI 명령은 구현할 목표이며, 반복 입력 CLI는 Phase 3에서 구현합니다.
+현재는 **Phase 3: 기본 CLI 연결**까지 완료했습니다.
+반복 입력 CLI에서 `INIT`, `COMMIT`, `BRANCH`, `SWITCH`, `exit`, `quit`를 사용할 수 있습니다.
+`LOG`, `PATH`, `ANCESTORS`, `SEARCH`와 정렬 옵션은 이후 Phase의 구현 목표입니다.
 
-## 개발 환경과 실행 계획
+## 개발 환경과 실행
 
 - Python 3.10 이상
 - 실행 엔트리 포인트: `main.py`
-- CLI가 구현되는 Phase 3부터 프로젝트 디렉터리에서 실행합니다.
+- 프로젝트 디렉터리에서 실행합니다.
 
 ```bash
 python main.py
 ```
 
 실행 후 `mini-git>` 프롬프트에서 명령을 입력하고 `exit` 또는 `quit`로 종료합니다.
-별도 외부 패키지 없이 Python 표준 라이브러리와 기본 자료형으로 구현할 계획입니다.
+EOF(일반적인 터미널에서 Ctrl+D)나 Ctrl+C로도 종료할 수 있습니다.
+`python` 명령이 없다면 `python3 main.py`로 실행합니다.
+별도 외부 패키지 없이 Python 표준 라이브러리와 기본 자료형을 사용합니다.
+
+### Phase 3 CLI 실행해 보기
+
+```text
+mini-git> init "Alice Kim"
+Initialized repository.
+Current branch: main
+Current user: Alice Kim
+mini-git> commit "Initial commit"
+[main c000001] Initial commit
+mini-git> branch "Login Feature"
+Created branch: Login Feature
+mini-git> switch "Login Feature"
+Switched to branch: Login Feature
+mini-git> COMMIT "Add Login"
+[Login Feature c000002] Add Login
+mini-git> switch missing
+Unknown branch: missing
+mini-git> switch main
+Switched to branch: main
+mini-git> commit "Add Payment"
+[main c000003] Add Payment
+mini-git> quit
+```
+
+명령어 이름의 대소문자는 구분하지 않고, 사용자명·브랜치명·메시지는 원문을 유지합니다.
+공백이 있는 인자는 큰따옴표나 작은따옴표로 감쌉니다.
+따옴표가 닫히지 않거나 인자 수가 맞지 않으면 `Invalid args`를 출력합니다.
+빈 입력은 무시하며, 오류가 발생해도 같은 저장소 상태로 다음 명령을 받습니다.
+`exit`, `quit`는 초기화 전에도 사용할 수 있지만 인자를 붙이면 오류가 발생합니다.
+아직 구현하지 않은 명령도 `Unknown command: <COMMAND>`로 처리합니다.
+
+`main.py`의 `parse_command()`는 입력을 분리하고 형식을 검사합니다.
+`execute_command()`는 저장소 메서드를 호출하고 결과를 출력하며, 종료 명령이면 `False`를 반환합니다.
+`main()`은 하나의 저장소를 유지하면서 입력과 실행을 반복하고 오류를 처리합니다.
 
 ### Phase 1 실행해 보기
 
@@ -95,6 +132,8 @@ Phase 1 테스트는 부모 리스트의 독립성, 여러 부모 표현, 초기
 재초기화 시 기존 상태 보존, 초기화 전 접근, hash 유일성·자리수 경계, 저장소 간 독립성을 확인합니다.
 Phase 2 테스트는 커밋 메타데이터와 부모 관계, 브랜치별 독립적인 이동, 빈 브랜치,
 잘못된 인자·중복 이름·없는 브랜치로 실패했을 때의 상태 보존을 확인합니다.
+Phase 3 테스트는 따옴표·대소문자·인자 검증, 오류 후 입력 계속 받기, 종료 명령과 EOF·Ctrl+C,
+실제 프로세스에서의 `main.py` 실행을 확인합니다.
 
 ## 구현 범위
 
@@ -170,10 +209,10 @@ DAG는 방향이 있고, 연결을 따라 돌아서 자기 자신으로 되돌�
 - 옵션 이름과 값은 명세에 나온 소문자 표기를 사용합니다.
 - 공백이 있는 인자는 따옴표로 감쌉니다. 예: `INIT "Alice Kim"`, `COMMIT "Add login feature"`.
 - 작성자 옵션도 `SEARCH --author="Alice Kim"`처럼 입력합니다.
-- `shlex.split()`으로 따옴표를 처리하고 인자 개수와 옵션 형식을 검사할 계획입니다.
+- `shlex.split()`으로 따옴표를 처리하고 인자 개수를 검사합니다. 옵션 형식은 해당 기능의 Phase에서 구현합니다.
 - 빈 사용자명, 빈 브랜치 이름, 빈 메시지, 빈 검색어는 허용하지 않습니다.
 - 잘못된 입력은 오류를 출력하고 다음 입력을 받습니다.
-- EOF 입력으로도 정상 종료합니다.
+- EOF 입력이나 Ctrl+C로도 정상 종료합니다.
 
 | 상황 | 오류 메시지 |
 | --- | --- |
@@ -285,9 +324,9 @@ README.md        # 실행법, 동작 규칙, 학습 계획
 
 학습: REPL, 문자열 파싱, 입력 처리와 저장소 로직의 분리.
 
-- [ ] 프롬프트 반복과 기본 명령 연결
-- [ ] 명령어 대소문자, 따옴표, 인자 검증 처리
-- [ ] 오류 후 반복 입력과 `exit`·`quit`·EOF 종료 처리
+- [x] 프롬프트 반복과 기본 명령 연결
+- [x] 명령어 대소문자, 따옴표, 인자 검증 처리
+- [x] 오류 후 반복 입력과 `exit`·`quit`·EOF 종료 처리
 
 완료 기준: `python main.py`에서 초기화·커밋·브랜치 명령을 실행할 수 있다.
 
