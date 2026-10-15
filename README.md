@@ -3,8 +3,9 @@
 커밋과 브랜치의 관계를 메모리에 저장하는 Python CLI 학습 프로젝트입니다.
 커밋 그래프를 만들고 탐색·검색·정렬 기능을 직접 구현하며 Git의 내부 구조와 알고리즘을 공부합니다.
 
-현재는 **Phase 0: 요구사항 분석 및 설계**를 완료했습니다. 실행 코드는 이후 Phase에서 구현합니다.
-아래 명령과 동작은 구현할 목표이며, 현재 실행 가능한 기능을 뜻하지 않습니다.
+현재는 **Phase 1: 커밋 모델과 저장소 초기화**까지 완료했습니다.
+`Commit` 모델과 `Repository` 초기화·현재 커밋 조회·hash 발급을 Python 메서드로 사용할 수 있습니다.
+아래 CLI 명령은 구현할 목표이며, 반복 입력 CLI는 Phase 3에서 구현합니다.
 
 ## 개발 환경과 실행 계획
 
@@ -18,6 +19,41 @@ python main.py
 
 실행 후 `mini-git>` 프롬프트에서 명령을 입력하고 `exit` 또는 `quit`로 종료합니다.
 별도 외부 패키지 없이 Python 표준 라이브러리와 기본 자료형으로 구현할 계획입니다.
+
+### Phase 1 실행해 보기
+
+프로젝트 디렉터리에서 `python`을 실행한 뒤 아래 코드를 입력할 수 있습니다.
+아직 커밋 생성 기능은 없으므로 초기화 직후 현재 커밋은 `None`입니다.
+
+```python
+from repository import Repository
+
+repository = Repository()              # 저장소 객체 생성. 아직 INIT 전 상태
+repository.initialize("Alice Kim")     # 사용자와 빈 main 브랜치 설정
+print(repository.current_user)         # Alice Kim
+print(repository.current_branch)       # main
+print(repository.current_commit_hash)  # None
+print(repository.generate_commit_hash())  # c000001
+print(repository.generate_commit_hash())  # c000002
+```
+
+hash 발급은 식별자를 예약하는 동작으로, 커밋을 만들거나 브랜치를 이동하지 않습니다.
+증가 카운터는 저장소 인스턴스마다 별도로 유지되며, 발급한 번호를 재사용하지 않습니다.
+6자리 표시는 최소 폭이므로 999999를 넘어도 잘라내거나 처음으로 돌아가지 않습니다.
+`initialize()`를 다시 호출하면 `ValueError("Repository already initialized")`가 발생합니다.
+초기화 전에 현재 커밋을 조회하거나 hash를 발급하면 `ValueError("Repository not initialized")`가 발생합니다.
+`require_initialized()`는 이후 저장소 명령에서도 재사용할 초기화 검사 메서드입니다.
+
+### 테스트 실행
+
+Python 표준 라이브러리 `unittest`를 사용합니다.
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Phase 1 테스트는 부모 리스트의 독립성, 여러 부모 표현, 초기 상태, 빈 사용자명,
+재초기화 시 기존 상태 보존, 초기화 전 접근, hash 유일성·자리수 경계, 저장소 간 독립성을 확인합니다.
 
 ## 구현 범위
 
@@ -181,10 +217,10 @@ README.md        # 실행법, 동작 규칙, 학습 계획
 
 학습: 클래스 또는 dataclass, `dict`, `list`, `None`.
 
-- [ ] `Commit`의 필수 필드와 여러 부모를 담는 구조 정의
-- [ ] 저장소 상태와 중복 없는 hash 생성 방식 구현
-- [ ] 초기화, 초기화 전 접근, 반복 초기화 처리
-- [ ] 초기 사용자, 빈 `main`, 현재 브랜치 확인
+- [x] `Commit`의 필수 필드와 여러 부모를 담는 구조 정의
+- [x] 저장소 상태와 중복 없는 hash 생성 방식 구현
+- [x] 초기화, 초기화 전 접근, 반복 초기화 처리
+- [x] 초기 사용자, 빈 `main`, 현재 브랜치 확인
 
 완료 기준: 초기화 결과와 오류 동작을 메서드 호출로 확인할 수 있다.
 
