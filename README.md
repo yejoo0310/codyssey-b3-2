@@ -3,8 +3,8 @@
 커밋과 브랜치의 관계를 메모리에 저장하는 Python CLI 학습 프로젝트입니다.
 커밋 그래프를 만들고 탐색·검색·정렬 기능을 직접 구현하며 Git의 내부 구조와 알고리즘을 공부합니다.
 
-현재는 **Phase 1: 커밋 모델과 저장소 초기화**까지 완료했습니다.
-`Commit` 모델과 `Repository` 초기화·현재 커밋 조회·hash 발급을 Python 메서드로 사용할 수 있습니다.
+현재는 **Phase 2: 커밋과 브랜치 관리**까지 완료했습니다.
+초기화, 커밋 생성, 브랜치 생성·전환을 Python 메서드로 사용할 수 있습니다.
 아래 CLI 명령은 구현할 목표이며, 반복 입력 CLI는 Phase 3에서 구현합니다.
 
 ## 개발 환경과 실행 계획
@@ -23,7 +23,7 @@ python main.py
 ### Phase 1 실행해 보기
 
 프로젝트 디렉터리에서 `python`을 실행한 뒤 아래 코드를 입력할 수 있습니다.
-아직 커밋 생성 기능은 없으므로 초기화 직후 현재 커밋은 `None`입니다.
+초기화만 한 상태에는 커밋이 없으므로 현재 커밋은 `None`입니다.
 
 ```python
 from repository import Repository
@@ -44,6 +44,45 @@ hash 발급은 식별자를 예약하는 동작으로, 커밋을 만들거나 �
 초기화 전에 현재 커밋을 조회하거나 hash를 발급하면 `ValueError("Repository not initialized")`가 발생합니다.
 `require_initialized()`는 이후 저장소 명령에서도 재사용할 초기화 검사 메서드입니다.
 
+### Phase 2 실행해 보기
+
+새 저장소에서 커밋을 만들고 브랜치를 나눠봅니다.
+`create_commit()`은 생성한 `Commit` 객체를 반환하고, 브랜치 생성·전환 메서드는 반환값 없이 상태를 변경합니다.
+
+```python
+from repository import Repository
+
+repository = Repository()
+repository.initialize("Alice")
+root = repository.create_commit("Initial commit")
+repository.create_branch("feature")  # 같은 커밋을 가리키는 브랜치만 추가
+print(repository.current_branch)     # main
+
+repository.switch_branch("feature")
+feature = repository.create_commit("Add login")
+print(repository.branches["main"])   # c000001: main은 분기 지점에 남아 있음
+
+repository.switch_branch("main")
+payment = repository.create_commit("Add payment")
+
+print(root.parents)                        # []
+print(feature.parents)                     # ['c000001']
+print(payment.parents)                     # ['c000001']
+print(repository.branches)                 # {'main': 'c000003', 'feature': 'c000002'}
+print(repository.current_commit_hash)      # c000003
+print(len(repository.commits))             # 3
+```
+
+커밋을 생성하면 현재 커밋의 hash를 부모로 저장하고, 현재 브랜치만 새 커밋으로 옮깁니다.
+작성자는 초기화할 때 설정한 사용자이며 시각은 UTC 기준으로 기록합니다.
+메시지는 빈 값이나 공백만 있는 값을 거부하고, 유효한 메시지의 대소문자와 공백은 그대로 보존합니다.
+브랜치 생성과 전환은 커밋을 만들거나 hash를 발급하지 않습니다.
+커밋이 없는 브랜치에서 첫 커밋을 만들면 다른 브랜치의 상태와 관계없이 부모가 없는 커밋이 됩니다.
+
+없는 브랜치 전환은 `Unknown branch: <name>`, 중복 브랜치 생성은
+`Branch already exists: <name>` 오류를 발생시키며 기존 상태를 유지합니다.
+역색인 갱신은 Phase 6에서 커밋 생성 흐름에 추가합니다.
+
 ### 테스트 실행
 
 Python 표준 라이브러리 `unittest`를 사용합니다.
@@ -54,6 +93,8 @@ python -m unittest discover -s tests -v
 
 Phase 1 테스트는 부모 리스트의 독립성, 여러 부모 표현, 초기 상태, 빈 사용자명,
 재초기화 시 기존 상태 보존, 초기화 전 접근, hash 유일성·자리수 경계, 저장소 간 독립성을 확인합니다.
+Phase 2 테스트는 커밋 메타데이터와 부모 관계, 브랜치별 독립적인 이동, 빈 브랜치,
+잘못된 인자·중복 이름·없는 브랜치로 실패했을 때의 상태 보존을 확인합니다.
 
 ## 구현 범위
 
@@ -230,10 +271,10 @@ README.md        # 실행법, 동작 규칙, 학습 계획
 
 학습: 참조, 상태 변경, 부모 관계, DAG.
 
-- [ ] 커밋 생성과 현재 브랜치 이동 구현
-- [ ] 브랜치 생성과 전환 구현
-- [ ] 중복 이름과 없는 브랜치 오류 처리
-- [ ] 첫 커밋, 빈 브랜치, 브랜치 분기 후 독립적인 위치 변화 검증
+- [x] 커밋 생성과 현재 브랜치 이동 구현
+- [x] 브랜치 생성과 전환 구현
+- [x] 중복 이름과 없는 브랜치 오류 처리
+- [x] 첫 커밋, 빈 브랜치, 브랜치 분기 후 독립적인 위치 변화 검증
 
 완료 기준: 분기한 한쪽에 커밋해도 다른 브랜치의 위치가 바뀌지 않는다.
 역색인 갱신은 Phase 6에서 커밋 생성 흐름에 연결한다.

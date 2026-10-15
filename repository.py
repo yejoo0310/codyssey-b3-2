@@ -1,4 +1,6 @@
-"""메모리 저장소의 상태와 초기화를 관리한다."""
+"""메모리에서 커밋과 브랜치를 관리한다."""
+
+from datetime import datetime, timezone
 
 from models import Commit
 
@@ -43,3 +45,44 @@ class Repository:
         self._commit_counter += 1
         # 6자리는 최소 폭이다. 카운터가 커져도 잘라내거나 다시 시작하지 않는다.
         return f"c{self._commit_counter:06d}"
+
+    def create_commit(self, message: str) -> Commit:
+        """현재 커밋을 부모로 새 커밋을 만들고 현재 브랜치를 옮긴다."""
+        branch_name = self.require_initialized()
+        if not message.strip():
+            raise ValueError("Invalid args")
+
+        parent_hash = self.current_commit_hash
+        # 초기화된 저장소에는 작성자가 설정되어 있다.
+        assert self.current_user is not None
+        commit = Commit(
+            hash=self.generate_commit_hash(),
+            message=message,
+            author=self.current_user,
+            timestamp=datetime.now(timezone.utc),
+            parents=[] if parent_hash is None else [parent_hash],
+        )
+        self.commits[commit.hash] = commit
+        self.branches[branch_name] = commit.hash
+        return commit
+
+    def create_branch(self, branch_name: str) -> None:
+        """현재 커밋을 가리키는 브랜치를 만든다. 현재 브랜치는 유지한다."""
+        self.require_initialized()
+        if not branch_name.strip():
+            raise ValueError("Invalid args")
+        if branch_name in self.branches:
+            raise ValueError(f"Branch already exists: {branch_name}")
+
+        # 커밋을 복사하지 않고 같은 hash를 가리킨다.
+        self.branches[branch_name] = self.current_commit_hash
+
+    def switch_branch(self, branch_name: str) -> None:
+        """기존 커밋을 그대로 두고 현재 브랜치를 바꾼다."""
+        self.require_initialized()
+        if not branch_name.strip():
+            raise ValueError("Invalid args")
+        if branch_name not in self.branches:
+            raise ValueError(f"Unknown branch: {branch_name}")
+
+        self.current_branch = branch_name
