@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from graph import find_ancestors, topological_sort
+from graph import find_ancestors, shortest_path, topological_sort
 from models import Commit
 
 
@@ -97,3 +97,8 @@ class Repository:
         """지정한 커밋의 모든 조상을 반환한다."""
         self.require_initialized()
         return find_ancestors(self.commits, commit_hash)
+
+    def get_path(self, start: str, end: str) -> list[str]:
+        """두 커밋 사이의 최단 경로를 hash 목록으로 반환한다."""
+        self.require_initialized()
+        return shortest_path(self.commits, start, end)

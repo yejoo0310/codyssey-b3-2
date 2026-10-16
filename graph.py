@@ -1,4 +1,4 @@
-"""커밋 그래프의 부모 우선 정렬과 조상 탐색을 제공한다."""
+"""커밋 그래프의 로그, 조상 탐색, 최단 경로를 제공한다."""
 
 from collections import deque
 
@@ -53,3 +53,53 @@ def find_ancestors(commits: dict[str, Commit], commit_hash: str) -> list[Commit]
             result.append(commits[parent_hash])
             stack.append(parent_hash)
     return result
+
+
+def shortest_path(commits: dict[str, Commit], start: str, end: str) -> list[str]:
+    """양방향 최단 경로 중 전체 경로 문자열이 사전순으로 가장 작은 것을 반환한다."""
+    for commit_hash in (start, end):
+        if commit_hash not in commits:
+            raise ValueError(f"Unknown commit: {commit_hash}")
+    if start == end:
+        return [start]
+
+    neighbors: dict[str, set[str]] = {commit_hash: set() for commit_hash in commits}
+    for commit_hash, commit in commits.items():
+        for parent_hash in commit.parents:
+            if parent_hash not in commits:
+                raise ValueError(f"Unknown commit: {parent_hash}")
+            neighbors[commit_hash].add(parent_hash)
+            neighbors[parent_hash].add(commit_hash)
+
+    # 도착점에서 BFS를 하면 각 커밋에서 도착점까지의 거리를 알 수 있다.
+    distances = {end: 0}
+    queue = deque([end])
+    visit_order = []
+    while queue:
+        current = queue.popleft()
+        visit_order.append(current)
+        for neighbor in neighbors[current]:
+            if neighbor not in distances:
+                distances[neighbor] = distances[current] + 1
+                queue.append(neighbor)
+    if start not in distances:
+        return []
+
+    suffixes = {end: end}
+    next_hops: dict[str, str] = {}
+    # 가까운 커밋부터 최선의 나머지 경로를 정한다. 이웃 순서에는 의존하지 않는다.
+    for current in visit_order[1:]:
+        best_next = None
+        for neighbor in neighbors[current]:
+            if distances[neighbor] != distances[current] - 1:
+                continue
+            if best_next is None or suffixes[neighbor] < suffixes[best_next]:
+                best_next = neighbor
+        assert best_next is not None
+        next_hops[current] = best_next
+        suffixes[current] = f"{current}->{suffixes[best_next]}"
+
+    path = [start]
+    while path[-1] != end:
+        path.append(next_hops[path[-1]])
+    return path

@@ -20,7 +20,7 @@ def parse_command(line: str) -> tuple[str, list[str]]:
     arguments = tokens[1:]
     argument_counts = {
         "INIT": 1, "COMMIT": 1, "BRANCH": 1, "SWITCH": 1,
-        "LOG": 0, "ANCESTORS": 1, "EXIT": 0, "QUIT": 0,
+        "LOG": 0, "ANCESTORS": 1, "PATH": 2, "EXIT": 0, "QUIT": 0,
     }
     if not command:
         raise ValueError("Invalid args")
@@ -72,6 +72,9 @@ def execute_command(repository: Repository, line: str) -> bool:
         print(f"Switched to branch: {argument}")
     elif command == "ANCESTORS":
         print_commits(repository.get_ancestors(argument))
+    elif command == "PATH":
+        path = repository.get_path(arguments[0], arguments[1])
+        print("Path: " + " -> ".join(path) if path else "No path")
     return True
 
 
