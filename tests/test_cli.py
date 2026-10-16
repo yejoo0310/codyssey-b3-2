@@ -181,7 +181,7 @@ class GraphCommandTests(unittest.TestCase):
     def test_graph_command_arguments(self) -> None:
         self.assertEqual(parse_command("lOg"), ("LOG", []))
         self.assertEqual(parse_command("aNcEsToRs c000001"), ("ANCESTORS", ["c000001"]))
-        for line in ("LOG extra", "LOG --sort-by=date", "ANCESTORS", "ANCESTORS one two", 'ANCESTORS ""'):
+        for line in ("LOG extra", "ANCESTORS", "ANCESTORS one two", 'ANCESTORS ""'):
             with self.subTest(line=line):
                 with self.assertRaisesRegex(ValueError, "^Invalid args$"):
                     parse_command(line)

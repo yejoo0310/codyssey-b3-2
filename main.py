@@ -26,7 +26,10 @@ def parse_command(line: str) -> tuple[str, list[str]]:
         raise ValueError("Invalid args")
     if command not in argument_counts:
         raise ValueError(f"Unknown command: {command}")
-    if len(arguments) != argument_counts[command]:
+    if command == "LOG":
+        if arguments not in ([], ["--sort-by=date"], ["--sort-by=author"]):
+            raise ValueError("Invalid args")
+    elif len(arguments) != argument_counts[command]:
         raise ValueError("Invalid args")
     if any(not argument.strip() for argument in arguments):
         raise ValueError("Invalid args")
@@ -55,7 +58,8 @@ def execute_command(repository: Repository, line: str) -> bool:
     if not command:
         return True
     if command == "LOG":
-        print_commits(repository.get_log())
+        sort_by = arguments[0][len("--sort-by="):] if arguments else None
+        print_commits(repository.get_log(sort_by))
         return True
 
     argument = arguments[0]

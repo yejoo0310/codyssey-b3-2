@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from graph import find_ancestors, shortest_path, topological_sort
 from models import Commit
 from search import InvertedIndex
+from sorting import merge_sort
 
 
 class Repository:
@@ -91,10 +92,17 @@ class Repository:
 
         self.current_branch = branch_name
 
-    def get_log(self) -> list[Commit]:
-        """저장소 전체 커밋을 부모 우선 순서로 반환한다."""
+    def get_log(self, sort_by: str | None = None) -> list[Commit]:
+        """기본 로그는 부모 우선, 옵션이 있으면 지정한 기준으로 정렬한다."""
         self.require_initialized()
-        return topological_sort(self.commits)
+        if sort_by not in (None, "date", "author"):
+            raise ValueError("Invalid args")
+        commits = topological_sort(self.commits)
+        if sort_by == "date":
+            return merge_sort(commits, key=lambda commit: commit.timestamp)
+        if sort_by == "author":
+            return merge_sort(commits, key=lambda commit: commit.author)
+        return commits
 
     def get_ancestors(self, commit_hash: str) -> list[Commit]:
         """지정한 커밋의 모든 조상을 반환한다."""
