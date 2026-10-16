@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from graph import find_ancestors, shortest_path, topological_sort
 from models import Commit
+from search import InvertedIndex
 
 
 class Repository:
@@ -16,6 +17,7 @@ class Repository:
         self.current_branch: str | None = None
         self.current_user: str | None = None
         self._commit_counter = 0
+        self.index = InvertedIndex()
 
     def initialize(self, user_name: str) -> None:
         """현재 사용자와 커밋 없는 main 브랜치를 설정한다."""
@@ -64,6 +66,7 @@ class Repository:
             parents=[] if parent_hash is None else [parent_hash],
         )
         self.commits[commit.hash] = commit
+        self.index.add_commit(commit)
         self.branches[branch_name] = commit.hash
         return commit
 
@@ -102,3 +105,13 @@ class Repository:
         """두 커밋 사이의 최단 경로를 hash 목록으로 반환한다."""
         self.require_initialized()
         return shortest_path(self.commits, start, end)
+
+    def search_keywords(self, query: str) -> list[Commit]:
+        """모든 검색 토큰을 포함하는 커밋을 색인으로 찾는다."""
+        self.require_initialized()
+        return [self.commits[commit_hash] for commit_hash in self.index.search_keywords(query)]
+
+    def search_author(self, name: str) -> list[Commit]:
+        """작성자 이름이 정확히 일치하는 커밋을 색인으로 찾는다."""
+        self.require_initialized()
+        return [self.commits[commit_hash] for commit_hash in self.index.search_author(name)]

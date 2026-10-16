@@ -20,7 +20,7 @@ def parse_command(line: str) -> tuple[str, list[str]]:
     arguments = tokens[1:]
     argument_counts = {
         "INIT": 1, "COMMIT": 1, "BRANCH": 1, "SWITCH": 1,
-        "LOG": 0, "ANCESTORS": 1, "PATH": 2, "EXIT": 0, "QUIT": 0,
+        "LOG": 0, "ANCESTORS": 1, "PATH": 2, "SEARCH": 1, "EXIT": 0, "QUIT": 0,
     }
     if not command:
         raise ValueError("Invalid args")
@@ -30,6 +30,9 @@ def parse_command(line: str) -> tuple[str, list[str]]:
         raise ValueError("Invalid args")
     if any(not argument.strip() for argument in arguments):
         raise ValueError("Invalid args")
+    if command == "SEARCH" and arguments[0].startswith("--"):
+        if not arguments[0].startswith("--author=") or not arguments[0][len("--author="):].strip():
+            raise ValueError("Invalid args")
     return command, arguments
 
 
@@ -75,6 +78,11 @@ def execute_command(repository: Repository, line: str) -> bool:
     elif command == "PATH":
         path = repository.get_path(arguments[0], arguments[1])
         print("Path: " + " -> ".join(path) if path else "No path")
+    elif command == "SEARCH":
+        if argument.startswith("--author="):
+            print_commits(repository.search_author(argument[len("--author="):]))
+        else:
+            print_commits(repository.search_keywords(argument))
     return True
 
 
