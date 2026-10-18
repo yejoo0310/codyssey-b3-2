@@ -1,7 +1,7 @@
 """커밋 생성과 브랜치 분기 시 상태 변화를 확인한다."""
 
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from repository import Repository
 
@@ -25,8 +25,9 @@ class CommitAndBranchTests(unittest.TestCase):
         self.assertEqual(commit.parents, [])
         self.assertLessEqual(before, commit.timestamp)
         self.assertLessEqual(commit.timestamp, after)
+        self.assertEqual(commit.timestamp.utcoffset(), timedelta(hours=9))
         self.assertIs(self.repository.commits[commit.hash], commit)
-        self.assertEqual(self.repository.current_commit_hash, commit.hash)
+        self.assertEqual(self.repository.current_commit_hash(), commit.hash)
         self.assertEqual(self.repository.branches, {"main": commit.hash})
 
     def test_next_commit_references_previous_commit_without_changing_it(self) -> None:
@@ -39,7 +40,7 @@ class CommitAndBranchTests(unittest.TestCase):
         self.assertEqual((first.message, first.author, first.timestamp), original_metadata)
         self.assertNotEqual(first.hash, second.hash)
         self.assertEqual(len(self.repository.commits), 2)
-        self.assertEqual(self.repository.current_commit_hash, second.hash)
+        self.assertEqual(self.repository.current_commit_hash(), second.hash)
 
     def test_new_branch_shares_current_commit_without_switching(self) -> None:
         commit = self.repository.create_commit("분기 지점")
@@ -57,7 +58,7 @@ class CommitAndBranchTests(unittest.TestCase):
 
         self.assertEqual(self.repository.branches["main"], root.hash)
         self.repository.switch_branch("main")
-        self.assertEqual(self.repository.current_commit_hash, root.hash)
+        self.assertEqual(self.repository.current_commit_hash(), root.hash)
         main_commit = self.repository.create_commit("결제 추가")
 
         self.assertEqual(feature_commit.parents, [root.hash])
@@ -66,18 +67,18 @@ class CommitAndBranchTests(unittest.TestCase):
         self.assertEqual(self.repository.branches["main"], main_commit.hash)
         self.assertEqual(self.repository.branches["feature"], feature_commit.hash)
         self.repository.switch_branch("feature")
-        self.assertEqual(self.repository.current_commit_hash, feature_commit.hash)
+        self.assertEqual(self.repository.current_commit_hash(), feature_commit.hash)
         self.assertEqual(len(self.repository.commits), 3)
 
     def test_empty_branches_can_start_independent_histories(self) -> None:
         self.repository.create_branch("feature")
         self.repository.switch_branch("feature")
-        self.assertIsNone(self.repository.current_commit_hash)
+        self.assertIsNone(self.repository.current_commit_hash())
 
         feature_root = self.repository.create_commit("기능 시작")
         self.assertIsNone(self.repository.branches["main"])
         self.repository.switch_branch("main")
-        self.assertIsNone(self.repository.current_commit_hash)
+        self.assertIsNone(self.repository.current_commit_hash())
         main_root = self.repository.create_commit("메인 시작")
 
         self.assertEqual(feature_root.parents, [])
@@ -92,7 +93,7 @@ class CommitAndBranchTests(unittest.TestCase):
         self.repository.switch_branch("main")
         self.repository.switch_branch("main")
 
-        self.assertEqual(self.repository.current_commit_hash, first.hash)
+        self.assertEqual(self.repository.current_commit_hash(), first.hash)
         self.assertEqual(len(self.repository.commits), 1)
         self.assertEqual(self.repository.create_commit("다음").hash, "c000002")
 
@@ -169,6 +170,6 @@ class CommitAndBranchTests(unittest.TestCase):
         for name in ("feature", "Feature", "login feature"):
             self.repository.switch_branch(name)
             self.assertEqual(self.repository.current_branch, name)
-            self.assertIsNone(self.repository.current_commit_hash)
+            self.assertIsNone(self.repository.current_commit_hash())
 
         self.assertEqual(len(self.repository.branches), 4)

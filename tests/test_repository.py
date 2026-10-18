@@ -23,7 +23,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(repository.current_user, "Alice Kim")
         self.assertEqual(repository.current_branch, "main")
         self.assertEqual(repository.branches, {"main": None})
-        self.assertIsNone(repository.current_commit_hash)
+        self.assertIsNone(repository.current_commit_hash())
         self.assertEqual(repository.commits, {})
 
     def test_access_before_initialization_is_rejected(self) -> None:
@@ -32,7 +32,7 @@ class RepositoryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "^Repository not initialized$"):
             repository.require_initialized()
         with self.assertRaisesRegex(ValueError, "^Repository not initialized$"):
-            _ = repository.current_commit_hash
+            _ = repository.current_commit_hash()
         with self.assertRaisesRegex(ValueError, "^Repository not initialized$"):
             repository.generate_commit_hash()
 
@@ -76,7 +76,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(hashes[0], "c000001")
         self.assertEqual(hashes[-1], "c001000")
         self.assertEqual(repository.commits, {})
-        self.assertIsNone(repository.current_commit_hash)
+        self.assertIsNone(repository.current_commit_hash())
 
     def test_hash_counter_does_not_wrap_at_six_digits(self) -> None:
         repository = Repository()

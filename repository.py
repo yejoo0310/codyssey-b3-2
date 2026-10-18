@@ -1,11 +1,14 @@
 """메모리에서 커밋과 브랜치를 관리한다."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from graph import find_ancestors, shortest_path, topological_sort
 from models import Commit
 from search import InvertedIndex
 from sorting import merge_sort
+
+
+KST = timezone(timedelta(hours=9))
 
 
 class Repository:
@@ -37,7 +40,6 @@ class Repository:
             raise ValueError("Repository not initialized")
         return self.current_branch
 
-    @property
     def current_commit_hash(self) -> str | None:
         """현재 브랜치의 커밋 hash를 반환한다. 첫 커밋 전에는 None이다."""
         branch_name = self.require_initialized()
@@ -56,14 +58,14 @@ class Repository:
         if not message.strip():
             raise ValueError("Invalid args")
 
-        parent_hash = self.current_commit_hash
+        parent_hash = self.current_commit_hash()
         # 초기화된 저장소에는 작성자가 설정되어 있다.
         assert self.current_user is not None
         commit = Commit(
             hash=self.generate_commit_hash(),
             message=message,
             author=self.current_user,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(KST),
             parents=[] if parent_hash is None else [parent_hash],
             branch=branch_name,
         )
@@ -81,7 +83,7 @@ class Repository:
             raise ValueError(f"Branch already exists: {branch_name}")
 
         # 커밋을 복사하지 않고 같은 hash를 가리킨다.
-        self.branches[branch_name] = self.current_commit_hash
+        self.branches[branch_name] = self.current_commit_hash()
 
     def switch_branch(self, branch_name: str) -> None:
         """기존 커밋을 그대로 두고 현재 브랜치를 바꾼다."""

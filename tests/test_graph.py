@@ -123,7 +123,7 @@ class RepositoryGraphTests(unittest.TestCase):
         self.assertEqual({commit.hash for commit in result}, {root.hash, main_tip.hash, feature_tip.hash})
         self.assertEqual(repository.get_ancestors(feature_tip.hash), [root])
         self.assertEqual(repository.current_branch, "feature")
-        self.assertEqual(repository.current_commit_hash, feature_tip.hash)
+        self.assertEqual(repository.current_commit_hash(), feature_tip.hash)
         self.assertEqual(repository.branches["main"], main_tip.hash)
 
     def test_empty_repository_and_unknown_commit(self) -> None:
