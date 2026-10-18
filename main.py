@@ -39,14 +39,15 @@ def parse_command(line: str) -> tuple[str, list[str]]:
     return command, arguments
 
 
-def print_commits(commits: list[Commit]) -> None:
-    """커밋의 hash, 작성자, 시각, 메시지를 출력한다."""
+def print_commits(commits: list[Commit], show_branch: bool = False) -> None:
+    """커밋 정보를 출력하고, 로그에서는 생성 당시 브랜치도 표시한다."""
     if not commits:
         print("No commits found.")
         return
     for commit in commits:
         timestamp = commit.timestamp.isoformat(sep=" ", timespec="seconds")
-        print(f"commit {commit.hash} ({commit.author}, {timestamp})")
+        branch_label = f" [{commit.branch}]" if show_branch and commit.branch is not None else ""
+        print(f"commit {commit.hash} ({commit.author}, {timestamp}){branch_label}")
         print(commit.message)
 
 
@@ -59,7 +60,7 @@ def execute_command(repository: Repository, line: str) -> bool:
         return True
     if command == "LOG":
         sort_by = arguments[0][len("--sort-by="):] if arguments else None
-        print_commits(repository.get_log(sort_by))
+        print_commits(repository.get_log(sort_by), show_branch=True)
         return True
 
     argument = arguments[0]

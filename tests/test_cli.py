@@ -6,9 +6,11 @@ import subprocess
 import sys
 import unittest
 from contextlib import redirect_stdout
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from main import execute_command, main, parse_command
+from models import Commit
 from repository import Repository
 
 
@@ -177,6 +179,53 @@ class ReplTests(unittest.TestCase):
 
 class GraphCommandTests(unittest.TestCase):
     """로그와 조상 탐색의 입력 규칙과 출력을 확인한다."""
+
+    def test_logs_keep_creation_branch_after_branches_move(self) -> None:
+        repository = Repository()
+        repository.initialize("Alice")
+        root = repository.create_commit("Initial commit")
+        repository.create_branch("Login Feature")
+        repository.switch_branch("Login Feature")
+        feature = repository.create_commit("Add login feature")
+        repository.switch_branch("main")
+        payment = repository.create_commit("Add payment feature")
+        repository.create_commit("Another main commit")
+        repository.switch_branch("Login Feature")
+
+        for command in ("log", "LOG --sort-by=date", "LOG --sort-by=author"):
+            with self.subTest(command=command):
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    execute_command(repository, command)
+                headers = {line.split()[1]: line for line in output.getvalue().splitlines() if line.startswith("commit ")}
+                self.assertTrue(headers[root.hash].endswith(" [main]"))
+                self.assertTrue(headers[feature.hash].endswith(" [Login Feature]"))
+                self.assertTrue(headers[payment.hash].endswith(" [main]"))
+                self.assertEqual(root.branch, "main")
+                self.assertEqual(feature.branch, "Login Feature")
+                self.assertEqual(repository.current_branch, "Login Feature")
+
+    def test_other_commit_lists_keep_their_existing_format(self) -> None:
+        repository = Repository()
+        repository.initialize("Alice")
+        root = repository.create_commit("Initial commit")
+        child = repository.create_commit("Next commit")
+        for command in ("SEARCH Initial", "SEARCH --author=Alice", f"ANCESTORS {child.hash}"):
+            with self.subTest(command=command):
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    execute_command(repository, command)
+                self.assertIn(f"commit {root.hash}", output.getvalue())
+                self.assertNotIn(" [main]", output.getvalue())
+
+    def test_log_does_not_invent_branch_for_manually_created_commit(self) -> None:
+        repository = Repository()
+        repository.initialize("Alice")
+        repository.commits["manual"] = Commit("manual", "Test", "Alice", datetime(2026, 10, 18, tzinfo=timezone.utc))
+        output = io.StringIO()
+        with redirect_stdout(output):
+            execute_command(repository, "LOG")
+        self.assertEqual(output.getvalue(), "commit manual (Alice, 2026-10-18 00:00:00+00:00)\nTest\n")
 
     def test_graph_command_arguments(self) -> None:
         self.assertEqual(parse_command("lOg"), ("LOG", []))

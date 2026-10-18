@@ -14,3 +14,5 @@ class Commit:
     timestamp: datetime
     # default_factory는 커밋마다 별도의 빈 리스트를 만든다.
     parents: list[str] = field(default_factory=list)
+    # 브랜치가 이동해도 생성 당시 이름은 유지한다.
+    branch: str | None = None

@@ -65,6 +65,7 @@ class Repository:
             author=self.current_user,
             timestamp=datetime.now(timezone.utc),
             parents=[] if parent_hash is None else [parent_hash],
+            branch=branch_name,
         )
         self.commits[commit.hash] = commit
         self.index.add_commit(commit)
