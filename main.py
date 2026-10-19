@@ -47,8 +47,7 @@ def print_commits(commits: list[Commit], show_branch: bool = False) -> None:
     for commit in commits:
         timestamp = commit.timestamp.astimezone(KST).strftime("%Y-%m-%d %H:%M:%S")
         branch_label = f" [{commit.branch}]" if show_branch and commit.branch is not None else ""
-        print(f"commit {commit.hash} ({commit.author}, {timestamp}){branch_label}")
-        print(commit.message)
+        print(f"commit {commit.hash} \"{commit.message}\" ({commit.author}, {timestamp}){branch_label}")
 
 
 def execute_command(repository: Repository, line: str) -> bool:
