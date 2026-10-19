@@ -1,14 +1,11 @@
 """메모리에서 커밋과 브랜치를 관리한다."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 from graph import find_ancestors, shortest_path, topological_sort
 from models import Commit
 from search import InvertedIndex
 from sorting import merge_sort
-
-
-KST = timezone(timedelta(hours=9))
 
 
 class Repository:
@@ -65,7 +62,7 @@ class Repository:
             hash=self.generate_commit_hash(),
             message=message,
             author=self.current_user,
-            timestamp=datetime.now(KST),
+            timestamp=datetime.now,
             parents=[] if parent_hash is None else [parent_hash],
             branch=branch_name,
         )
@@ -101,10 +98,8 @@ class Repository:
         if sort_by not in (None, "date", "author"):
             raise ValueError("Invalid args")
         commits = topological_sort(self.commits)
-        if sort_by == "date":
-            return merge_sort(commits, key=lambda commit: commit.timestamp)
-        if sort_by == "author":
-            return merge_sort(commits, key=lambda commit: commit.author)
+        if sort_by is not None:
+            return merge_sort(commits, key=sort_by)
         return commits
 
     def get_ancestors(self, commit_hash: str) -> list[Commit]:

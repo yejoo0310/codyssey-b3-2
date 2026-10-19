@@ -225,7 +225,7 @@ class GraphCommandTests(unittest.TestCase):
         output = io.StringIO()
         with redirect_stdout(output):
             execute_command(repository, "LOG")
-        self.assertEqual(output.getvalue(), "commit manual (Alice, 2026-10-18 09:00:00)\nTest\n")
+        self.assertEqual(output.getvalue(), 'commit manual "Test" (Alice, 2026-10-18 09:00:00)\n')
 
     def test_graph_command_arguments(self) -> None:
         self.assertEqual(parse_command("lOg"), ("LOG", []))
@@ -285,7 +285,7 @@ class GraphCommandTests(unittest.TestCase):
         result = output.getvalue()
         self.assertEqual(result.count("Repository not initialized"), 2)
         self.assertIn("Unknown commit: missing", result)
-        self.assertIn("commit c000001 (Alice,", result)
+        self.assertIn('commit c000001 "시작" (Alice,', result)
 
     def test_graph_commands_run_in_real_process(self) -> None:
         result = subprocess.run(
@@ -299,5 +299,5 @@ class GraphCommandTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stderr, "")
-        self.assertEqual(result.stdout.count("commit c000001 (Alice,"), 2)
-        self.assertEqual(result.stdout.count("commit c000002 (Alice,"), 1)
+        self.assertEqual(result.stdout.count('commit c000001 "시작" (Alice,'), 2)
+        self.assertEqual(result.stdout.count('commit c000002 "다음" (Alice,'), 1)

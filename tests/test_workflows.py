@@ -79,7 +79,7 @@ class WorkflowTests(unittest.TestCase):
         ]
         self.assertEqual([block.strip() for block in output[13:23]], expected_errors)
         self.assertIn("[main c000001] Recovered login", output[23])
-        self.assertIn("commit c000001 (Alice,", output[24])
+        self.assertIn('commit c000001 "Recovered login" (Alice,', output[24])
         self.assertEqual(output[25].strip(), "Path: c000001")
         self.assertEqual(output[26], "")
 

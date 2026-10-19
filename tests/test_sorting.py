@@ -27,23 +27,38 @@ class MergeSortTests(unittest.TestCase):
         )
         for values, expected in cases:
             with self.subTest(values=values):
-                original = values.copy()
-                result = merge_sort(values, key=lambda value: value)
-                self.assertEqual(result, expected)
-                self.assertEqual(values, original)
-                self.assertIsNot(result, values)
+                timestamp = datetime(2026, 10, 17, tzinfo=timezone.utc)
+                commits = [Commit(str(value), "Test", "Alice", timestamp + timedelta(seconds=value)) for value in values]
+                original = commits.copy()
+                result = merge_sort(commits, key="date")
+                self.assertEqual([int(commit.hash) for commit in result], expected)
+                self.assertEqual(commits, original)
+                self.assertIsNot(result, commits)
 
     def test_key_changes_comparison_criterion(self) -> None:
-        values = [(3, "a"), (1, "c"), (2, "b")]
-        self.assertEqual(merge_sort(values, key=lambda value: value[0]), [(1, "c"), (2, "b"), (3, "a")])
-        self.assertEqual(merge_sort(values, key=lambda value: value[1]), [(3, "a"), (2, "b"), (1, "c")])
+        timestamp = datetime(2026, 10, 17, tzinfo=timezone.utc)
+        commits = [
+            Commit("a", "Test", "Alice", timestamp + timedelta(hours=3)),
+            Commit("b", "Test", "Charlie", timestamp + timedelta(hours=1)),
+            Commit("c", "Test", "Bob", timestamp + timedelta(hours=2)),
+        ]
+        self.assertEqual([commit.hash for commit in merge_sort(commits, key="date")], ["b", "c", "a"])
+        self.assertEqual([commit.hash for commit in merge_sort(commits, key="author")], ["a", "c", "b"])
 
     def test_equal_keys_preserve_order_across_merge_halves(self) -> None:
         values = [(2, "first"), (1, "second"), (2, "third"), (1, "fourth"), (2, "fifth")]
+        timestamp = datetime(2026, 10, 17, tzinfo=timezone.utc)
+        commits = [Commit(name, "Test", "Alice", timestamp + timedelta(seconds=value)) for value, name in values]
         self.assertEqual(
-            merge_sort(values, key=lambda value: value[0]),
-            [(1, "second"), (1, "fourth"), (2, "first"), (2, "third"), (2, "fifth")],
+            [commit.hash for commit in merge_sort(commits, key="date")],
+            ["second", "fourth", "first", "third", "fifth"],
         )
+
+    def test_invalid_keys_are_rejected_even_for_empty_input(self) -> None:
+        for key in ("", "timestamp", "Date", "message"):
+            with self.subTest(key=key):
+                with self.assertRaisesRegex(ValueError, "^Invalid args$"):
+                    merge_sort([], key=key)
 
     def test_production_code_does_not_call_standard_sorting_apis(self) -> None:
         project_root = Path(__file__).resolve().parents[1]
@@ -148,7 +163,7 @@ class LogSortCommandTests(unittest.TestCase):
                 main()
         self.assertIn("Repository not initialized", output.getvalue())
         self.assertIn("Invalid args", output.getvalue())
-        self.assertIn("commit c000001 (Alice,", output.getvalue())
+        self.assertIn('commit c000001 "시작" (Alice,', output.getvalue())
 
     def test_sort_options_run_in_real_process(self) -> None:
         result = subprocess.run(
@@ -161,4 +176,4 @@ class LogSortCommandTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stderr, "")
-        self.assertEqual(result.stdout.count("commit c000001 (Alice,"), 2)
+        self.assertEqual(result.stdout.count('commit c000001 "시작" (Alice,'), 2)

@@ -158,7 +158,7 @@ class SearchCommandTests(unittest.TestCase):
             execute_command(repository, 'SEARCH --author="Alice Kim"')
             execute_command(repository, "SEARCH missing")
         result = output.getvalue()
-        self.assertEqual(result.count(f"commit {commit.hash} (Alice Kim,"), 2)
+        self.assertEqual(result.count(f'commit {commit.hash} "Add Login" (Alice Kim,'), 2)
         self.assertEqual(result.count("Add Login"), 2)
         self.assertIn("No commits found.", result)
 
@@ -171,7 +171,7 @@ class SearchCommandTests(unittest.TestCase):
         result = output.getvalue()
         self.assertEqual(result.count("Repository not initialized"), 2)
         self.assertIn("Invalid args", result)
-        self.assertIn("commit c000001 (Alice,", result)
+        self.assertIn('commit c000001 "Add login" (Alice,', result)
 
     def test_search_runs_in_real_process(self) -> None:
         result = subprocess.run(
@@ -184,4 +184,4 @@ class SearchCommandTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stderr, "")
-        self.assertEqual(result.stdout.count("commit c000001 (Alice Kim,"), 2)
+        self.assertEqual(result.stdout.count('commit c000001 "Add Login" (Alice Kim,'), 2)
