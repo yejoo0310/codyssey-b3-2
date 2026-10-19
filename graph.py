@@ -1,7 +1,5 @@
 """커밋 그래프의 로그, 조상 탐색, 최단 경로를 제공한다."""
 
-from collections import deque
-
 from models import Commit
 
 
@@ -17,10 +15,13 @@ def topological_sort(commits: dict[str, Commit]) -> list[Commit]:
                 raise ValueError(f"Unknown commit: {parent_hash}")
             children[parent_hash].append(commit_hash)
 
-    ready = deque(commit_hash for commit_hash in commits if remaining_parents[commit_hash] == 0)
+    ready = [commit_hash for commit_hash in commits if remaining_parents[commit_hash] == 0]
+    front = 0
     result: list[Commit] = []
-    while ready:
-        commit_hash = ready.popleft()
+    while front < len(ready):
+        # 앞 원소를 삭제하지 않고 인덱스만 옮겨 큐처럼 사용한다.
+        commit_hash = ready[front]
+        front += 1
         result.append(commits[commit_hash])
         for child_hash in children[commit_hash]:
             remaining_parents[child_hash] -= 1
@@ -73,10 +74,12 @@ def shortest_path(commits: dict[str, Commit], start: str, end: str) -> list[str]
 
     # 도착점에서 BFS를 하면 각 커밋에서 도착점까지의 거리를 알 수 있다.
     distances = {end: 0}
-    queue = deque([end])
+    queue = [end]
+    front = 0
     visit_order = []
-    while queue:
-        current = queue.popleft()
+    while front < len(queue):
+        current = queue[front]
+        front += 1
         visit_order.append(current)
         for neighbor in neighbors[current]:
             if neighbor not in distances:
