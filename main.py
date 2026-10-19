@@ -3,7 +3,7 @@
 import shlex
 
 from models import Commit
-from repository import KST, Repository
+from repository import Repository
 
 
 def parse_command(line: str) -> tuple[str, list[str]]:
@@ -45,7 +45,7 @@ def print_commits(commits: list[Commit], show_branch: bool = False) -> None:
         print("No commits found.")
         return
     for commit in commits:
-        timestamp = commit.timestamp.astimezone(KST).strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = commit.timestamp.strftime("%Y-%m-%d %H:%M:%S")
         branch_label = f" [{commit.branch}]" if show_branch and commit.branch is not None else ""
         print(f"commit {commit.hash} \"{commit.message}\" ({commit.author}, {timestamp}){branch_label}")
 

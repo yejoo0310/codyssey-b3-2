@@ -62,7 +62,7 @@ class Repository:
             hash=self.generate_commit_hash(),
             message=message,
             author=self.current_user,
-            timestamp=datetime.now,
+            timestamp=datetime.now(),
             parents=[] if parent_hash is None else [parent_hash],
             branch=branch_name,
         )

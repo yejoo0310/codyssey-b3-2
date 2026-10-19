@@ -1,7 +1,7 @@
 """커밋 생성과 브랜치 분기 시 상태 변화를 확인한다."""
 
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 from repository import Repository
 
@@ -15,9 +15,9 @@ class CommitAndBranchTests(unittest.TestCase):
         self.repository.initialize("Alice Kim")
 
     def test_first_commit_stores_metadata_and_moves_main(self) -> None:
-        before = datetime.now(timezone.utc)
+        before = datetime.now()
         commit = self.repository.create_commit("첫 번째 커밋")
-        after = datetime.now(timezone.utc)
+        after = datetime.now()
 
         self.assertEqual(commit.hash, "c000001")
         self.assertEqual(commit.message, "첫 번째 커밋")
@@ -25,7 +25,7 @@ class CommitAndBranchTests(unittest.TestCase):
         self.assertEqual(commit.parents, [])
         self.assertLessEqual(before, commit.timestamp)
         self.assertLessEqual(commit.timestamp, after)
-        self.assertEqual(commit.timestamp.utcoffset(), timedelta(hours=9))
+        self.assertIsNone(commit.timestamp.tzinfo)
         self.assertIs(self.repository.commits[commit.hash], commit)
         self.assertEqual(self.repository.current_commit_hash(), commit.hash)
         self.assertEqual(self.repository.branches, {"main": commit.hash})

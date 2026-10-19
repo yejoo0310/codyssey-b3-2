@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from main import execute_command, main, parse_command
 from models import Commit
-from repository import KST, Repository
+from repository import Repository
 
 
 class CommandParsingTests(unittest.TestCase):
@@ -225,7 +225,7 @@ class GraphCommandTests(unittest.TestCase):
         output = io.StringIO()
         with redirect_stdout(output):
             execute_command(repository, "LOG")
-        self.assertEqual(output.getvalue(), 'commit manual "Test" (Alice, 2026-10-18 09:00:00)\n')
+        self.assertEqual(output.getvalue(), 'commit manual "Test" (Alice, 2026-10-18 00:00:00)\n')
 
     def test_graph_command_arguments(self) -> None:
         self.assertEqual(parse_command("lOg"), ("LOG", []))
@@ -251,7 +251,7 @@ class GraphCommandTests(unittest.TestCase):
         self.assertLess(result.index(f"commit {root.hash}"), result.index(f"commit {child.hash}"))
         self.assertLess(result.index(f"commit {root.hash}"), result.index(f"commit {feature.hash}"))
         self.assertIn("Alice Kim", result)
-        self.assertIn(root.timestamp.astimezone(KST).strftime("%Y-%m-%d %H:%M:%S"), result)
+        self.assertIn(root.timestamp.strftime("%Y-%m-%d %H:%M:%S"), result)
         self.assertNotIn("+09:00", result)
         self.assertNotIn("+00:00", result)
         self.assertIn("메인 작업", result)
